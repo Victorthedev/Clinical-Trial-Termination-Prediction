@@ -45,8 +45,26 @@ def calculate_duration(df):
     df["planned_duration_days"] = (
         df["completion_date"] - df["start_date"]
     ).dt.days
+    
+    df["duration_missing"] = df["planned_duration_days"].isnull().astype(int)
+    
     median_duration = df["planned_duration_days"].median()
     df["planned_duration_days"] = df["planned_duration_days"].fillna(median_duration)
+    
+    cap = df["planned_duration_days"].quantile(0.99)
+    df["planned_duration_days"] = df["planned_duration_days"].clip(upper=cap)
+    
+    return df
+
+def clean_enrollment(df):
+    df["enrollment"] = pd.to_numeric(df["enrollment"], errors="coerce")
+    median_enrollment = df["enrollment"].median()
+    df["enrollment_clean"] = df["enrollment"].fillna(median_enrollment)
+    
+    cap = df["enrollment_clean"].quantile(0.99)
+    df["enrollment_clean"] = df["enrollment_clean"].clip(upper=cap)
+    df["log_enrollment"] = np.log1p(df["enrollment_clean"])
+    
     return df
 
 def clean_study_type(df):
@@ -58,7 +76,7 @@ def get_final_features(df):
         "phase_clean",
         "log_enrollment",
         "is_industry",
-        "planned_duration_days",
+        "duration_missing",
         "is_interventional"
     ]
     target = "target"
