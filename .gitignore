@@ -3,3 +3,6 @@ __pycache__/
 *.pyc
 data/raw/
 .DS_Store
+!models/best_model.pkl
+!models/scaler.pkl
+.env
