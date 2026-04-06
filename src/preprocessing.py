@@ -31,6 +31,8 @@ def clean_enrollment(df):
     df["enrollment"] = pd.to_numeric(df["enrollment"], errors="coerce")
     median_enrollment = df["enrollment"].median()
     df["enrollment_clean"] = df["enrollment"].fillna(median_enrollment)
+    cap = df["enrollment_clean"].quantile(0.99)
+    df["enrollment_clean"] = df["enrollment_clean"].clip(upper=cap)
     df["log_enrollment"] = np.log1p(df["enrollment_clean"])
     return df
 
@@ -45,26 +47,15 @@ def calculate_duration(df):
     df["planned_duration_days"] = (
         df["completion_date"] - df["start_date"]
     ).dt.days
-    
+
     df["duration_missing"] = df["planned_duration_days"].isnull().astype(int)
-    
+
     median_duration = df["planned_duration_days"].median()
     df["planned_duration_days"] = df["planned_duration_days"].fillna(median_duration)
-    
+
     cap = df["planned_duration_days"].quantile(0.99)
     df["planned_duration_days"] = df["planned_duration_days"].clip(upper=cap)
-    
-    return df
 
-def clean_enrollment(df):
-    df["enrollment"] = pd.to_numeric(df["enrollment"], errors="coerce")
-    median_enrollment = df["enrollment"].median()
-    df["enrollment_clean"] = df["enrollment"].fillna(median_enrollment)
-    
-    cap = df["enrollment_clean"].quantile(0.99)
-    df["enrollment_clean"] = df["enrollment_clean"].clip(upper=cap)
-    df["log_enrollment"] = np.log1p(df["enrollment_clean"])
-    
     return df
 
 def clean_study_type(df):
@@ -72,8 +63,11 @@ def clean_study_type(df):
     return df
 
 def get_final_features(df):
-    df["phase_x_industry"] = df["phase_clean"] * df["is_industry"]
-    df["phase_x_enrollment"] = df["phase_clean"] * df["log_enrollment"]
+    # Interaction features were tested but produced no improvement
+    # and were dropped. Kept here as comments for documentation.
+    # df["phase_x_industry"] = df["phase_clean"] * df["is_industry"]
+    # df["phase_x_enrollment"] = df["phase_clean"] * df["log_enrollment"]
+
     features = [
         "phase_clean",
         "log_enrollment",
@@ -82,18 +76,18 @@ def get_final_features(df):
         "is_interventional"
     ]
     target = "target"
-    
+
     df_final = df[features + [target, "nct_id"]].copy()
     df_final = df_final.dropna()
-    
+
     print(f"\nFinal dataset shape: {df_final.shape}")
     print(f"Target distribution:\n{df_final['target'].value_counts()}")
-    
+
     return df_final, features
 
 def main():
     os.makedirs("data/processed", exist_ok=True)
-    
+
     df = load_raw_data()
     df = create_target(df)
     df = clean_phase(df)
@@ -101,13 +95,13 @@ def main():
     df = clean_sponsor(df)
     df = calculate_duration(df)
     df = clean_study_type(df)
-    
+
     df_final, features = get_final_features(df)
-    
+
     output_path = "data/processed/trials_processed.csv"
     df_final.to_csv(output_path, index=False)
     print(f"\nSaved processed data to {output_path}")
-    
+
     return df_final, features
 
 if __name__ == "__main__":

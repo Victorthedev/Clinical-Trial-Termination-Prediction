@@ -6,11 +6,7 @@ import shap
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LogisticRegression
 from openai import OpenAI
-from dotenv import load_dotenv
 import os
-
-load_dotenv()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 FEATURES = [
     "phase_clean",
@@ -36,6 +32,19 @@ def load_model():
         scaler = pickle.load(f)
     return obj["model"], obj["name"], scaler
 
+@st.cache_data
+def load_background():
+    return pd.read_csv("data/processed/trials_processed.csv")[FEATURES]
+
+def get_openai_client():
+    try:
+        return OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+    except Exception:
+        api_key = os.getenv("OPENAI_API_KEY")
+        if api_key:
+            return OpenAI(api_key=api_key)
+        return None
+
 def preprocess_input(phase, enrollment, sponsor, duration_known, study_type):
     phase_map = {"Phase 1": 1, "Phase 2": 2, "Phase 3": 3, "Phase 4": 4, "Not Applicable": 0}
     row = {
@@ -48,7 +57,7 @@ def preprocess_input(phase, enrollment, sponsor, duration_known, study_type):
     return pd.DataFrame([row])
 
 def plot_shap_waterfall(model, scaler, input_df):
-    background = pd.read_csv("data/processed/trials_processed.csv")[FEATURES]
+    background = load_background()
     background_scaled = pd.DataFrame(
         scaler.transform(background),
         columns=FEATURES
@@ -57,7 +66,12 @@ def plot_shap_waterfall(model, scaler, input_df):
         scaler.transform(input_df),
         columns=FEATURES
     )
-    explainer = shap.LinearExplainer(model, background_scaled)
+
+    if isinstance(model, LogisticRegression):
+        explainer = shap.LinearExplainer(model, background_scaled)
+    else:
+        explainer = shap.TreeExplainer(model)
+
     shap_values = explainer.shap_values(input_scaled)
 
     fig, ax = plt.subplots(figsize=(8, 4))
@@ -97,11 +111,17 @@ def batch_predict(model, scaler, df):
     return df
 
 def generate_explanation(model, scaler, input_df, prob):
-    background = pd.read_csv("data/processed/trials_processed.csv")[FEATURES]
+    client = get_openai_client()
+
+    background = load_background()
     background_scaled = pd.DataFrame(scaler.transform(background), columns=FEATURES)
     input_scaled = pd.DataFrame(scaler.transform(input_df), columns=FEATURES)
 
-    explainer = shap.LinearExplainer(model, background_scaled)
+    if isinstance(model, LogisticRegression):
+        explainer = shap.LinearExplainer(model, background_scaled)
+    else:
+        explainer = shap.TreeExplainer(model)
+
     shap_values = explainer.shap_values(input_scaled)[0]
 
     shap_summary = "\n".join([
@@ -126,6 +146,9 @@ The model's SHAP values show which features drove this prediction:
 {shap_summary}
 
 Write a clear 2-3 sentence explanation for a non-technical user. Use the actual trial details above, not assumptions. Reference only what is true about this specific trial. Do not mention SHAP or model."""
+
+    if client is None:
+        return f"This trial is assessed as **{direction} risk** ({prob:.1%})."
 
     response = client.chat.completions.create(
         model="gpt-4o-mini",
@@ -205,7 +228,9 @@ with tab2:
 
             st.subheader("Risk Distribution")
             fig2, ax = plt.subplots()
-            results["risk_label"].value_counts().plot(kind="bar", ax=ax, color=["#d32f2f", "#f57c00", "#1976d2"])
+            risk_counts = results["risk_label"].value_counts()
+            risk_counts = risk_counts.reindex(["High", "Medium", "Low"]).fillna(0)
+            risk_counts.plot(kind="bar", ax=ax, color=["#d32f2f", "#f57c00", "#1976d2"])
             ax.set_xlabel("Risk Level")
             ax.set_ylabel("Number of Trials")
             ax.set_title("Termination Risk Distribution")
