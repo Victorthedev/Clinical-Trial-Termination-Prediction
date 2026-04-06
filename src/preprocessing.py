@@ -72,6 +72,8 @@ def clean_study_type(df):
     return df
 
 def get_final_features(df):
+    df["phase_x_industry"] = df["phase_clean"] * df["is_industry"]
+    df["phase_x_enrollment"] = df["phase_clean"] * df["log_enrollment"]
     features = [
         "phase_clean",
         "log_enrollment",
