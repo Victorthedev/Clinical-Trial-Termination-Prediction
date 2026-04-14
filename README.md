@@ -2,7 +2,7 @@
 
 A machine learning system that predicts whether a clinical trial will be terminated early, built on data from ClinicalTrials.gov.
 
-**Live app:** [your-streamlit-url.streamlit.app](https://your-streamlit-url.streamlit.app)
+**Live app:** [https://clinical-trial-termination-prediction.streamlit.app](https://clinical-trial-termination-prediction.streamlit.app)
 
 ---
 
