@@ -139,7 +139,7 @@ Missing or malformed columns are handled automatically. A sample file is include
 
 ## Stack
 
-- Python 3.13
+- Python 3.11 (pinned in runtime.txt)
 - scikit-learn, XGBoost, SHAP
 - Streamlit
 - OpenAI GPT-4o-mini
