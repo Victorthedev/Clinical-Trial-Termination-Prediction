@@ -49,6 +49,7 @@ Clinical-Trial-Termination-Prediction/
 │
 ├── outputs/                  # Evaluation charts and visuals
 ├── app.py                    # Streamlit application
+├── clinical_trial_termination_prediction.ipynb  # Full pipeline notebook (Colab-ready)
 ├── sample_batch.csv          # Sample CSV for testing batch upload
 ├── requirements.txt
 └── README.md
@@ -88,6 +89,12 @@ OPENAI_API_KEY=your-key-here
 ---
 
 ## Reproducing the results
+
+**Option A — Jupyter / Google Colab (recommended)**
+
+Open `clinical_trial_termination_prediction.ipynb` in Colab and run all cells. The notebook covers the full pipeline: data ingestion, preprocessing, model training, evaluation plots, SHAP explanations, and a live prediction demo. No local setup required.
+
+**Option B — command line**
 
 Run the pipeline in order:
 
